@@ -1,4 +1,3 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useData } from './DataContext';
 import { auth } from '../config/firebase';
 import { signInAnonymously } from 'firebase/auth';
@@ -25,6 +24,12 @@ export const AuthProvider = ({ children }) => {
     const { users } = useData();
 
     const login = (username, password) => {
+        // DEBUG: Check if users are loaded
+        if (users.length === 0) {
+            console.warn("Login attempted but NO users loaded yet.");
+            return undefined; // Signal loading state
+        }
+
         // Validate against LIVE data from Firestore
         const foundUser = users.find(u => u.username === username && u.password === password);
 

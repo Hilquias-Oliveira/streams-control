@@ -11,9 +11,12 @@ const Login = () => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        const success = login(username, password);
-        if (success) {
+        const result = login(username, password);
+
+        if (result === true) {
             navigate('/dashboard');
+        } else if (result === undefined) {
+            setError('Ainda carregando sistema... Tente em 5s.');
         } else {
             setError('Credenciais inválidas.');
         }
@@ -40,6 +43,10 @@ const Login = () => {
                         {error}
                     </div>
                 )}
+
+                <div className="mb-4 text-center text-xs text-gray-400">
+                    Status: {login('test', 'test') === undefined ? 'Carregando Banco...' : 'Conectado'}
+                </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="space-y-1">

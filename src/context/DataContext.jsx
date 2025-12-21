@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { db } from '../config/firebase';
+import { db, auth } from '../config/firebase';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc, doc, query, orderBy, limit, writeBatch } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 import { INITIAL_PAYMENTS, SERVICES as INITIAL_SERVICES, USERS } from '../data/mockData';
 
 const DataContext = createContext();
@@ -16,50 +17,60 @@ export const DataProvider = ({ children }) => {
 
     // --- FIRESTORE LISTENERS ---
 
-    // Services
+    // --- FIRESTORE LISTENERS ---
     useEffect(() => {
-        const unsubscribe = onSnapshot(collection(db, 'services'), (snapshot) => {
-            const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-            setServices(data);
-        }, (error) => console.error("Services Listener Error:", error));
-        return () => unsubscribe();
-    }, []);
+        let unsubServices, unsubUsers, unsubPayments, unsubLogs, unsubRequests;
 
-    // Users
-    useEffect(() => {
-        const unsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
-            const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-            setUsers(data);
-        }, (error) => console.error("Users Listener Error:", error));
-        return () => unsubscribe();
-    }, []);
+        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+            if (user) {
+                console.log("Auth verified, connecting to Firestore...");
 
-    // Payments
-    useEffect(() => {
-        const unsubscribe = onSnapshot(collection(db, 'payments'), (snapshot) => {
-            const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-            setPayments(data);
-        }, (error) => console.error("Payments Listener Error:", error));
-        return () => unsubscribe();
-    }, []);
+                // Services
+                unsubServices = onSnapshot(collection(db, 'services'), (snapshot) => {
+                    const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+                    setServices(data);
+                }, (error) => console.error("Services Listener Error:", error));
 
-    // Logs (Ordered by timestamp desc)
-    useEffect(() => {
-        const q = query(collection(db, 'logs'), orderBy('timestamp', 'desc'), limit(100));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-            setLogs(data);
-        }, (error) => console.error("Logs Listener Error:", error));
-        return () => unsubscribe();
-    }, []);
+                // Users
+                unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
+                    const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+                    setUsers(data);
+                }, (error) => console.error("Users Listener Error:", error));
 
-    // Processed Requests
-    useEffect(() => {
-        const unsubscribe = onSnapshot(collection(db, 'processed_requests'), (snapshot) => {
-            const ids = snapshot.docs.map(doc => doc.id);
-            setProcessedRequests(ids);
-        }, (error) => console.error("Requests Listener Error:", error));
-        return () => unsubscribe();
+                // Payments
+                unsubPayments = onSnapshot(collection(db, 'payments'), (snapshot) => {
+                    const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+                    setPayments(data);
+                }, (error) => console.error("Payments Listener Error:", error));
+
+                // Logs
+                const qLogs = query(collection(db, 'logs'), orderBy('timestamp', 'desc'), limit(100));
+                unsubLogs = onSnapshot(qLogs, (snapshot) => {
+                    const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+                    setLogs(data);
+                }, (error) => console.error("Logs Listener Error:", error));
+
+                // Requests
+                unsubRequests = onSnapshot(collection(db, 'processed_requests'), (snapshot) => {
+                    const ids = snapshot.docs.map(doc => doc.id);
+                    setProcessedRequests(ids);
+                }, (error) => console.error("Requests Listener Error:", error));
+
+            } else {
+                // If user logs out or auth not ready, clear data or stop listening?
+                // For anon auth, we usually just wait.
+                console.log("Waiting for Auth...");
+            }
+        });
+
+        return () => {
+            unsubscribeAuth();
+            if (unsubServices) unsubServices();
+            if (unsubUsers) unsubUsers();
+            if (unsubPayments) unsubPayments();
+            if (unsubLogs) unsubLogs();
+            if (unsubRequests) unsubRequests();
+        };
     }, []);
 
 
@@ -93,8 +104,10 @@ export const DataProvider = ({ children }) => {
         try {
             const paymentRef = doc(db, 'payments', id);
             await updateDoc(paymentRef, { status: 'paid' });
+            // toast.success("Pagamento aprovado!");
         } catch (error) {
             console.error("Error approving payment:", error);
+            // toast.error("Erro ao aprovar pagamento. Verifique sua conexão.");
         }
     };
 
@@ -141,8 +154,10 @@ export const DataProvider = ({ children }) => {
                     details: logDetails,
                     user
                 });
+                // toast.success(newStatus === 'paid' ? "Pagamento confirmado!" : "Status atualizado.");
             } catch (error) {
                 console.error("Error toggling payment status:", error);
+                // toast.error("Erro ao atualizar status. Tente novamente.");
             }
         }
     };
@@ -157,8 +172,10 @@ export const DataProvider = ({ children }) => {
                 avatar: userData.avatar || `https://i.pravatar.cc/150?u=${userData.username}`
             };
             await addDoc(collection(db, 'users'), newUser);
+            // toast.success("Usuário adicionado!");
         } catch (error) {
             console.error("Error adding user:", error);
+            // toast.error("Erro ao criar usuário.");
         }
     };
 
@@ -166,16 +183,20 @@ export const DataProvider = ({ children }) => {
         try {
             const userRef = doc(db, 'users', id);
             await updateDoc(userRef, updates);
+            // toast.success("Usuário atualizado!");
         } catch (error) {
             console.error("Error updating user:", error);
+            // toast.error("Erro ao atualizar usuário.");
         }
     };
 
     const deleteUser = async (id) => {
         try {
             await deleteDoc(doc(db, 'users', id));
+            // toast.success("Usuário removido.");
         } catch (error) {
             console.error("Error deleting user:", error);
+            // toast.error("Erro ao remover usuário.");
         }
     };
 
@@ -186,6 +207,7 @@ export const DataProvider = ({ children }) => {
             alert('Senha resetada para "123"!');
         } catch (error) {
             console.error("Error resetting password:", error);
+            // toast.error("Erro ao resetar senha.");
         }
     };
 
@@ -195,16 +217,20 @@ export const DataProvider = ({ children }) => {
             const id = serviceData.name.toUpperCase().replace(/\s+/g, '_');
             const newService = { ...serviceData };
             await setDoc(doc(db, 'services', id), newService);
+            // toast.success("Serviço criado!");
         } catch (error) {
             console.error("Error adding service:", error);
+            // toast.error("Erro ao criar serviço.");
         }
     };
 
     const deleteService = async (id) => {
         try {
             await deleteDoc(doc(db, 'services', id));
+            // toast.success("Serviço excluído.");
         } catch (error) {
             console.error("Error deleting service:", error);
+            // toast.error("Erro ao excluir serviço.");
         }
     };
 
@@ -348,8 +374,10 @@ export const DataProvider = ({ children }) => {
                     user: { name: 'System', role: 'admin' }
                 });
             }
+            // toast.success("Serviço atualizado com sucesso!");
         } catch (error) {
             console.error("Error updating service:", error);
+            // toast.error("Erro ao atualizar serviço.");
         }
     };
 
@@ -395,8 +423,10 @@ export const DataProvider = ({ children }) => {
                     details: `Pagamento de ${formatCurrency(payment.amount)} (Serviço: ${payment.serviceId}) removido.`,
                     user: { name: 'System', role: 'admin' }
                 });
+                // toast.success("Pagamento removido.");
             } catch (error) {
                 console.error("Error deleting payment:", error);
+                // toast.error("Erro ao remover pagamento.");
             }
         }
     };
@@ -415,8 +445,10 @@ export const DataProvider = ({ children }) => {
                 details: `Pagamento manual adicionado para serviço ${paymentData.serviceId}`,
                 user: { name: 'Admin', role: 'admin' }
             });
+            // toast.success("Conteúdo adicionado!");
         } catch (error) {
             console.error("Error adding manual payment:", error);
+            // toast.error("Erro ao adicionar.");
         }
     };
 

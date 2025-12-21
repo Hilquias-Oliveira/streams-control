@@ -377,3 +377,31 @@ exports.generateMonthlyPayments = functions.pubsub.schedule('0 11 1 * *')
         }
         return null;
     });
+// 5. Setup: Seed Admin User (Para inicializar o banco se estiver vazio)
+exports.seedAdmin = functions.https.onRequest(async (req, res) => {
+    try {
+        const adminEmail = "wesley"; // Username simples conforme o mock
+        const adminPass = "12345";
+
+        // Verifica se já existe
+        const snapshot = await db.collection('users').where('username', '==', adminEmail).get();
+
+        if (!snapshot.empty) {
+            return res.status(200).send("Admin already exists.");
+        }
+
+        // Criar Admin
+        await db.collection('users').add({
+            username: adminEmail,
+            password: adminPass, // Em produção, usar hash! (Aqui mantendo compatibilidade com o app atual)
+            name: "Wesley Admin",
+            role: "admin",
+            avatar: "https://github.com/shadcn.png"
+        });
+
+        return res.status(200).send("Admin user created successfully!");
+    } catch (error) {
+        console.error("Error seeding admin:", error);
+        return res.status(500).send("Internal Server Error");
+    }
+});
