@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "cstream-91370",
+    "old_default": "streams-control-db"
+  },
+  "targets": {},
+  "etags": {}
+}

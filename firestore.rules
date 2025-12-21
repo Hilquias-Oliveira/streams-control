@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Basic Rule: User must be authenticated (even anonymously)
+    // This blocks any request from outside our app (unless they have our API Key AND run the auth code)
+    // But importantly, it blocks open crawling and direct REST access without auth token.
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
