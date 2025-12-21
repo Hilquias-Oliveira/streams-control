@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useData } from './DataContext';
+import { auth } from '../config/firebase';
+import { signInAnonymously } from 'firebase/auth';
 
 const AuthContext = createContext();
 
@@ -11,6 +13,13 @@ export const AuthProvider = ({ children }) => {
         const saved = localStorage.getItem('streams_user');
         return saved ? JSON.parse(saved) : null;
     });
+
+    // Ensure Firebase Auth (Anonymous) for Firestore access
+    useEffect(() => {
+        signInAnonymously(auth)
+            .then(() => console.log("Firebase Auth: Signed in anonymously"))
+            .catch((error) => console.error("Firebase Auth Error:", error));
+    }, []);
 
     // Access users from Data Context (Firebase)
     const { users } = useData();
