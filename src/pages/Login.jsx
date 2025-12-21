@@ -1,13 +1,19 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 
 const Login = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const { login } = useAuth();
+    const { login, firebaseUser, authError } = useAuth();
     const navigate = useNavigate();
+
+    // DEBUG: Get raw users list to show count
+    const { users } = useAuth().users ? useAuth() : { users: [] }; // Accessing via context isn't direct, need generic import
+    // Actually, Login doesn't have access to DataContext directly via useAuth usually, but useAuth uses DataContext. 
+    // Let's import useData directly to be sure.
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -38,15 +44,14 @@ const Login = () => {
                     <p className="text-gray-500 text-sm">Painel de Controle</p>
                 </div>
 
-                {error && (
-                    <div className="mb-4 p-3 bg-red-100 text-red-600 text-sm rounded-lg text-center font-medium">
-                        {error}
+                {authError && (
+                    <div className="mb-4 p-3 bg-rose-100 text-rose-700 text-xs rounded-lg text-center font-mono break-all border border-rose-200">
+                        <strong>ERRO DETECTADO:</strong><br />
+                        {authError}
+                        <br />
+                        <span className="text-[10px] opacity-75">(Tire print e me mande)</span>
                     </div>
                 )}
-
-                <div className="mb-4 text-center text-xs text-gray-400">
-                    Status: {login('test', 'test') === undefined ? 'Carregando Banco...' : 'Conectado'}
-                </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="space-y-1">
