@@ -5,7 +5,7 @@ service cloud.firestore {
     // This blocks any request from outside our app (unless they have our API Key AND run the auth code)
     // But importantly, it blocks open crawling and direct REST access without auth token.
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if request.auth != null;
     }
   }
 }
