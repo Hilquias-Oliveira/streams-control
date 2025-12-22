@@ -4,7 +4,7 @@
 export const USERS = [
     { id: 1, name: 'Hilquias (Admin)', username: 'admin', password: '123', role: 'admin', avatar: 'https://github.com/shadcn.png', supervisedServices: [] },
     { id: 2, name: 'Alexandre', username: 'alexandre', password: '123', role: 'user', avatar: 'https://i.pravatar.cc/150?u=alex', supervisedServices: [] },
-    { id: 3, name: 'Clarissa', username: 'clarissa', password: '123', role: 'user', avatar: 'https://i.pravatar.cc/150?u=clari', supervisedServices: [] },
+    { id: 3, name: 'Clarissa', username: 'clarissa', password: '123', role: 'supervisor', avatar: 'https://i.pravatar.cc/150?u=clari', supervisedServices: ['APPLE TV'] },
     { id: 4, name: 'Felipe', username: 'felipe', password: '123', role: 'user', avatar: 'https://i.pravatar.cc/150?u=felipe', supervisedServices: [] },
     { id: 5, name: 'Ruana', username: 'ruana', password: '123', role: 'user', avatar: 'https://i.pravatar.cc/150?u=ruana', supervisedServices: [] },
     { id: 6, name: 'Duprat', username: 'duprat', password: '123', role: 'user', avatar: 'https://i.pravatar.cc/150?u=duprat', supervisedServices: [] },

@@ -3,6 +3,7 @@ import { db, auth } from '../config/firebase';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc, doc, query, orderBy, limit, writeBatch } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { INITIAL_PAYMENTS, SERVICES as INITIAL_SERVICES, USERS } from '../data/mockData';
+import { toast } from 'sonner';
 
 const DataContext = createContext();
 
@@ -104,10 +105,10 @@ export const DataProvider = ({ children }) => {
         try {
             const paymentRef = doc(db, 'payments', id);
             await updateDoc(paymentRef, { status: 'paid' });
-            // toast.success("Pagamento aprovado!");
+            toast.success("Pagamento aprovado!");
         } catch (error) {
             console.error("Error approving payment:", error);
-            // toast.error("Erro ao aprovar pagamento. Verifique sua conexão.");
+            toast.error("Erro ao aprovar pagamento. Verifique sua conexão.");
         }
     };
 
@@ -154,10 +155,10 @@ export const DataProvider = ({ children }) => {
                     details: logDetails,
                     user
                 });
-                // toast.success(newStatus === 'paid' ? "Pagamento confirmado!" : "Status atualizado.");
+                toast.success(newStatus === 'paid' ? "Pagamento confirmado!" : "Status atualizado.");
             } catch (error) {
                 console.error("Error toggling payment status:", error);
-                // toast.error("Erro ao atualizar status. Tente novamente.");
+                toast.error("Erro ao atualizar status. Tente novamente.");
             }
         }
     };
@@ -172,10 +173,10 @@ export const DataProvider = ({ children }) => {
                 avatar: userData.avatar || `https://i.pravatar.cc/150?u=${userData.username}`
             };
             await addDoc(collection(db, 'users'), newUser);
-            // toast.success("Usuário adicionado!");
+            toast.success("Usuário adicionado!");
         } catch (error) {
             console.error("Error adding user:", error);
-            // toast.error("Erro ao criar usuário.");
+            toast.error("Erro ao criar usuário.");
         }
     };
 
@@ -183,20 +184,20 @@ export const DataProvider = ({ children }) => {
         try {
             const userRef = doc(db, 'users', id);
             await updateDoc(userRef, updates);
-            // toast.success("Usuário atualizado!");
+            toast.success("Usuário atualizado!");
         } catch (error) {
             console.error("Error updating user:", error);
-            // toast.error("Erro ao atualizar usuário.");
+            toast.error("Erro ao atualizar usuário.");
         }
     };
 
     const deleteUser = async (id) => {
         try {
             await deleteDoc(doc(db, 'users', id));
-            // toast.success("Usuário removido.");
+            toast.success("Usuário removido.");
         } catch (error) {
             console.error("Error deleting user:", error);
-            // toast.error("Erro ao remover usuário.");
+            toast.error("Erro ao remover usuário.");
         }
     };
 
@@ -204,10 +205,10 @@ export const DataProvider = ({ children }) => {
         try {
             const userRef = doc(db, 'users', id);
             await updateDoc(userRef, { password: '123' });
-            alert('Senha resetada para "123"!');
+            toast.success('Senha resetada para "123"!');
         } catch (error) {
             console.error("Error resetting password:", error);
-            // toast.error("Erro ao resetar senha.");
+            toast.error("Erro ao resetar senha.");
         }
     };
 
@@ -217,20 +218,20 @@ export const DataProvider = ({ children }) => {
             const id = serviceData.name.toUpperCase().replace(/\s+/g, '_');
             const newService = { ...serviceData };
             await setDoc(doc(db, 'services', id), newService);
-            // toast.success("Serviço criado!");
+            toast.success("Serviço criado!");
         } catch (error) {
             console.error("Error adding service:", error);
-            // toast.error("Erro ao criar serviço.");
+            toast.error("Erro ao criar serviço.");
         }
     };
 
     const deleteService = async (id) => {
         try {
             await deleteDoc(doc(db, 'services', id));
-            // toast.success("Serviço excluído.");
+            toast.success("Serviço excluído.");
         } catch (error) {
             console.error("Error deleting service:", error);
-            // toast.error("Erro ao excluir serviço.");
+            toast.error("Erro ao excluir serviço.");
         }
     };
 
@@ -374,10 +375,10 @@ export const DataProvider = ({ children }) => {
                     user: { name: 'System', role: 'admin' }
                 });
             }
-            // toast.success("Serviço atualizado com sucesso!");
+            toast.success("Serviço atualizado com sucesso!");
         } catch (error) {
             console.error("Error updating service:", error);
-            // toast.error("Erro ao atualizar serviço.");
+            toast.error("Erro ao atualizar serviço.");
         }
     };
 
@@ -423,10 +424,10 @@ export const DataProvider = ({ children }) => {
                     details: `Pagamento de ${formatCurrency(payment.amount)} (Serviço: ${payment.serviceId}) removido.`,
                     user: { name: 'System', role: 'admin' }
                 });
-                // toast.success("Pagamento removido.");
+                toast.success("Pagamento removido.");
             } catch (error) {
                 console.error("Error deleting payment:", error);
-                // toast.error("Erro ao remover pagamento.");
+                toast.error("Erro ao remover pagamento.");
             }
         }
     };
@@ -445,10 +446,10 @@ export const DataProvider = ({ children }) => {
                 details: `Pagamento manual adicionado para serviço ${paymentData.serviceId}`,
                 user: { name: 'Admin', role: 'admin' }
             });
-            // toast.success("Conteúdo adicionado!");
+            toast.success("Conteúdo adicionado!");
         } catch (error) {
             console.error("Error adding manual payment:", error);
-            // toast.error("Erro ao adicionar.");
+            toast.error("Erro ao adicionar.");
         }
     };
 

@@ -291,7 +291,7 @@ const Admin = () => {
             v = v.replace(/\D/g, '');
             v = v.replace(/(\d{3})(\d)/, '$1.$2');
             v = v.replace(/(\d{3})(\d)/, '$1.$2');
-            v = v.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+            v = v.replace(/(\d{3})(\d{1, 2})$/, '$1-$2');
             v = v.substring(0, 14);
         } else if (serviceForm.pixKeyType === 'phone') {
             v = v.replace(/\D/g, '');
@@ -692,7 +692,7 @@ const Admin = () => {
                             const service = services.find(s => s.id === p.serviceId) || { name: '?' };
                             const user = getUser(p.userId) || { name: '?' };
                             const [y, m] = p.date.split('-');
-                            const canModify = !isSupervisor || (userData.supervisedServices || []).includes(p.serviceId);
+                            const canModify = !isSupervisor || (currentUser.supervisedServices || []).includes(p.serviceId);
 
                             return (
                                 <div key={p.id} className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 relative">
@@ -784,7 +784,7 @@ const Admin = () => {
                                     const service = services.find(s => s.id === p.serviceId) || { name: '?' };
                                     const user = getUser(p.userId) || { name: '?' };
                                     const [y, m] = p.date.split('-');
-                                    const canModify = !isSupervisor || (userData.supervisedServices || []).includes(p.serviceId);
+                                    const canModify = !isSupervisor || (currentUser.supervisedServices || []).includes(p.serviceId);
 
                                     return (
                                         <tr key={p.id} className="hover:bg-gray-50 transition-colors">
@@ -1054,84 +1054,187 @@ const Admin = () => {
             {/* --- MODALS --- */}
 
             {/* USER MODAL */}
-            {
-                isUserModalOpen && (
-                    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                        <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl animate-fade-in max-h-[90vh] overflow-y-auto">
-                            <h2 className="text-2xl font-bold mb-6 text-gray-900">{userData.id ? 'Editar Usuário' : 'Novo Usuário'}</h2>
-                            <form onSubmit={handleUserSubmit} className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-1">Nome</label>
-                                    <input className="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-gray-200" value={userData.name} onChange={e => setUserData({ ...userData, name: e.target.value })} required />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-1">Usuário</label>
-                                    <input className="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-gray-200" value={userData.username} onChange={e => setUserData({ ...userData, username: e.target.value })} required />
-                                </div>
+            {isUserModalOpen && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl animate-fade-in relative max-h-[90vh] overflow-y-auto">
+                        <button
+                            onClick={() => setIsUserModalOpen(false)}
+                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors"
+                        >
+                            <X size={24} />
+                        </button>
+                        <h2 className="text-xl font-bold mb-6 text-gray-900">{userData.id ? 'Editar Usuário' : 'Novo Usuário'}</h2>
 
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-1">Telefone (WhatsApp)</label>
-                                    <input
-                                        placeholder="(11) 99999-9999"
-                                        className="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-gray-200"
-                                        value={userData.phone || ''}
-                                        onChange={e => {
-                                            let v = e.target.value.replace(/\D/g, '');
-                                            v = v.replace(/^(\d{2})(\d)/g, '($1) $2');
-                                            v = v.replace(/(\d)(\d{4})$/, '$1-$2');
-                                            setUserData({ ...userData, phone: v.substring(0, 15) });
-                                        }}
-                                    />
+                        <form onSubmit={handleUserSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Nome</label>
+                                <input
+                                    required
+                                    value={userData.name}
+                                    onChange={e => setUserData({ ...userData, name: e.target.value })}
+                                    className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-indigo-500 focus:border-indigo-500 block p-3 outline-none font-bold"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Usuário</label>
+                                <input
+                                    required
+                                    value={userData.username}
+                                    onChange={e => setUserData({ ...userData, username: e.target.value })}
+                                    className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-indigo-500 focus:border-indigo-500 block p-3 outline-none font-bold"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Telefone (WhatsApp)</label>
+                                <input
+                                    value={userData.phone || ''}
+                                    onChange={e => setUserData({ ...userData, phone: e.target.value })}
+                                    className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-indigo-500 focus:border-indigo-500 block p-3 outline-none font-bold"
+                                    placeholder="(xx) xxxxx-xxxx"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Foto</label>
+                                <ImagePicker value={userData.avatar} onChange={(val) => setUserData({ ...userData, avatar: val })} />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Função</label>
+                                <div className="flex bg-gray-100 p-1 rounded-xl">
+                                    {['user', 'supervisor', 'admin'].map(role => (
+                                        <button
+                                            key={role}
+                                            type="button"
+                                            onClick={() => setUserData({ ...userData, role })}
+                                            className={`flex-1 py-2 text-sm font-bold rounded-lg capitalize transition-all ${userData.role === role ? 'bg-gray-900 text-white shadow-md' : 'text-gray-500 hover:text-gray-700'
+                                                }`}
+                                        >
+                                            {role === 'user' ? 'Usuário' : role}
+                                        </button>
+                                    ))}
                                 </div>
+                            </div>
 
-                                <ImagePicker value={userData.avatar} onChange={val => setUserData({ ...userData, avatar: val })} label="Foto (URL ou Arquivo)" />
-
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-1">Função</label>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {['user', 'supervisor', 'admin'].map(role => (
-                                            <button
-                                                key={role}
-                                                type="button"
-                                                onClick={() => setUserData({ ...userData, role })}
-                                                className={`py-2 rounded-xl text-sm font-bold capitalize border-2 transition-all ${userData.role === role ? 'border-gray-900 bg-gray-900 text-white' : 'border-transparent bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
-                                            >
-                                                {role}
-                                            </button>
+                            {userData.role === 'supervisor' && (
+                                <div className="bg-gray-50 p-4 rounded-xl space-y-2">
+                                    <h3 className="text-xs font-bold text-gray-400 uppercase">Pode Aprovar:</h3>
+                                    <div className="space-y-2">
+                                        {services.map(s => (
+                                            <label key={s.id} className="flex items-center gap-3 cursor-pointer">
+                                                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${(userData.supervisedServices || []).includes(s.id) ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-gray-300'
+                                                    }`}>
+                                                    {(userData.supervisedServices || []).includes(s.id) && <Check size={14} className="text-white" />}
+                                                </div>
+                                                <input
+                                                    type="checkbox"
+                                                    className="hidden"
+                                                    checked={(userData.supervisedServices || []).includes(s.id)}
+                                                    onChange={() => toggleSupervisedService(s.id)}
+                                                />
+                                                <span className="text-sm font-medium text-gray-700">{s.name}</span>
+                                            </label>
                                         ))}
                                     </div>
                                 </div>
-                                {userData.role === 'supervisor' && (
-                                    <div className="bg-gray-50 p-4 rounded-xl">
-                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-3">Pode aprovar:</label>
-                                        <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar">
-                                            {services.map(s => (
-                                                <label key={s.id} className="flex items-center gap-3 cursor-pointer hover:bg-gray-100 p-2 rounded-lg transition-colors">
-                                                    <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${userData.supervisedServices.includes(s.id) ? 'bg-gray-900 border-gray-900' : 'bg-white border-gray-300'}`}>
-                                                        {userData.supervisedServices.includes(s.id) && <Check size={12} className="text-white" />}
-                                                    </div>
-                                                    <input
-                                                        type="checkbox"
-                                                        className="hidden"
-                                                        checked={userData.supervisedServices.includes(s.id)}
-                                                        onChange={() => toggleSupervisedService(s.id)}
-                                                    />
-                                                    <img src={s.logo} className="w-6 h-6 object-contain" />
-                                                    <span className="text-sm font-medium text-gray-700">{s.name}</span>
-                                                </label>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
+                            )}
 
-                                <div className="flex gap-3 mt-6">
-                                    <button type="button" onClick={() => setIsUserModalOpen(false)} className="flex-1 py-3 text-gray-500 font-bold hover:bg-gray-50 rounded-xl">Cancelar</button>
-                                    <button type="submit" className="flex-1 py-3 bg-gray-900 text-white font-bold rounded-xl hover:bg-gray-800">Salvar</button>
-                                </div>
-                            </form>
-                        </div>
+                            <div className="flex gap-3 mt-6">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsUserModalOpen(false)}
+                                    className="flex-1 py-3 text-gray-500 font-bold hover:text-gray-700 transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 py-3 bg-gray-900 text-white font-bold rounded-xl hover:bg-gray-800 transition-colors shadow-lg"
+                                >
+                                    Salvar
+                                </button>
+                            </div>
+                        </form>
                     </div>
-                )
+                </div>
+            )}
+
+            {/* MANUAL PAYMENT MODAL */}
+            {isPaymentModalOpen && (
+                <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl animate-fade-in max-h-[90vh] overflow-y-auto">
+                        <h2 className="text-2xl font-bold mb-6 text-gray-900">{userData.id ? 'Editar Usuário' : 'Novo Usuário'}</h2>
+                        <form onSubmit={handleUserSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Nome</label>
+                                <input className="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-gray-200" value={userData.name} onChange={e => setUserData({ ...userData, name: e.target.value })} required />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Usuário</label>
+                                <input className="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-gray-200" value={userData.username} onChange={e => setUserData({ ...userData, username: e.target.value })} required />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Telefone (WhatsApp)</label>
+                                <input
+                                    placeholder="(11) 99999-9999"
+                                    className="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-gray-200"
+                                    value={userData.phone || ''}
+                                    onChange={e => {
+                                        let v = e.target.value.replace(/\D/g, '');
+                                        v = v.replace(/^(\d{2})(\d)/g, '($1) $2');
+                                        v = v.replace(/(\d)(\d{4})$/, '$1-$2');
+                                        setUserData({ ...userData, phone: v.substring(0, 15) });
+                                    }}
+                                />
+                            </div>
+
+                            <ImagePicker value={userData.avatar} onChange={val => setUserData({ ...userData, avatar: val })} label="Foto (URL ou Arquivo)" />
+
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Função</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {['user', 'supervisor', 'admin'].map(role => (
+                                        <button
+                                            key={role}
+                                            type="button"
+                                            onClick={() => setUserData({ ...userData, role })}
+                                            className={`py-2 rounded-xl text-sm font-bold capitalize border-2 transition-all ${userData.role === role ? 'border-gray-900 bg-gray-900 text-white' : 'border-transparent bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
+                                        >
+                                            {role}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            {userData.role === 'supervisor' && (
+                                <div className="bg-gray-50 p-4 rounded-xl">
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-3">Pode aprovar:</label>
+                                    <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar">
+                                        {services.map(s => (
+                                            <label key={s.id} className="flex items-center gap-3 cursor-pointer hover:bg-gray-100 p-2 rounded-lg transition-colors">
+                                                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${userData.supervisedServices.includes(s.id) ? 'bg-gray-900 border-gray-900' : 'bg-white border-gray-300'}`}>
+                                                    {userData.supervisedServices.includes(s.id) && <Check size={12} className="text-white" />}
+                                                </div>
+                                                <input
+                                                    type="checkbox"
+                                                    className="hidden"
+                                                    checked={userData.supervisedServices.includes(s.id)}
+                                                    onChange={() => toggleSupervisedService(s.id)}
+                                                />
+                                                <img src={s.logo} className="w-6 h-6 object-contain" />
+                                                <span className="text-sm font-medium text-gray-700">{s.name}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="flex gap-3 mt-6">
+                                <button type="button" onClick={() => setIsUserModalOpen(false)} className="flex-1 py-3 text-gray-500 font-bold hover:bg-gray-50 rounded-xl">Cancelar</button>
+                                <button type="submit" className="flex-1 py-3 bg-gray-900 text-white font-bold rounded-xl hover:bg-gray-800">Salvar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )
             }
 
             {/* SERVICE MODAL (Updated with ImagePicker) */}

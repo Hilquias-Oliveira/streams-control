@@ -2,30 +2,37 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { toast } from 'sonner';
 
 const Login = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const { login, firebaseUser, authError } = useAuth();
+    const [isLoading, setIsLoading] = useState(false);
+    const { login } = useAuth();
     const navigate = useNavigate();
 
-    // DEBUG: Get raw users list to show count
-    const { users } = useAuth().users ? useAuth() : { users: [] }; // Accessing via context isn't direct, need generic import
-    // Actually, Login doesn't have access to DataContext directly via useAuth usually, but useAuth uses DataContext. 
-    // Let's import useData directly to be sure.
-
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        const result = login(username, password);
+        setError('');
+        setIsLoading(true);
 
-        if (result === true) {
+        // Artificial delay for UX
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        const success = login(username, password);
+
+        if (success === undefined) {
+            setError('Sistema ainda carregando. Tente novamente em 5s.');
+            toast.info("Sistema carregando, aguarde...");
+        } else if (success) {
             navigate('/dashboard');
-        } else if (result === undefined) {
-            setError('Ainda carregando sistema... Tente em 5s.');
+            toast.success(`Bem-vindo, ${username}!`);
         } else {
-            setError('Credenciais inválidas.');
+            setError('Credenciais Inválidas.');
+            toast.error("Usuário ou senha incorretos.");
         }
+        setIsLoading(false);
     };
 
     return (
@@ -44,14 +51,7 @@ const Login = () => {
                     <p className="text-gray-500 text-sm">Painel de Controle</p>
                 </div>
 
-                {authError && (
-                    <div className="mb-4 p-3 bg-rose-100 text-rose-700 text-xs rounded-lg text-center font-mono break-all border border-rose-200">
-                        <strong>ERRO DETECTADO:</strong><br />
-                        {authError}
-                        <br />
-                        <span className="text-[10px] opacity-75">(Tire print e me mande)</span>
-                    </div>
-                )}
+
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="space-y-1">

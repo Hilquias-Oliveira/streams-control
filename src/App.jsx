@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DataProvider } from './context/DataContext';
@@ -8,9 +8,9 @@ import Sidebar from './components/layout/Sidebar';
 import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import { Toaster } from 'sonner';
 
 import { Menu } from 'lucide-react';
-import { useState } from 'react';
 
 const Layout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -44,21 +44,20 @@ const PrivateRoute = ({ children }) => {
 function App() {
   return (
     <ErrorBoundary>
-      <ErrorBoundary>
-        <DataProvider>
-          <AuthProvider>
-            <BrowserRouter>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-                <Route path="/streams" element={<PrivateRoute><Streams /></PrivateRoute>} />
-                <Route path="/admin" element={<PrivateRoute><Admin /></PrivateRoute>} />
-                <Route path="/" element={<Navigate to="/dashboard" />} />
-              </Routes>
-            </BrowserRouter>
-          </AuthProvider>
-        </DataProvider>
-      </ErrorBoundary>
+      <DataProvider>
+        <AuthProvider>
+          <BrowserRouter>
+            <Toaster richColors position="top-right" expand toastOptions={{ style: { zIndex: 9999 } }} />
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+              <Route path="/streams" element={<PrivateRoute><Streams /></PrivateRoute>} />
+              <Route path="/admin" element={<PrivateRoute><Admin /></PrivateRoute>} />
+              <Route path="/" element={<Navigate to="/dashboard" />} />
+            </Routes>
+          </BrowserRouter>
+        </AuthProvider>
+      </DataProvider>
     </ErrorBoundary>
   );
 }
