@@ -3,8 +3,9 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
-import { Check, CheckCircle, Trash2, Key, Plus, UserPlus, Edit, Shield, LayoutGrid, ScrollText, Copy, Bell, BellRing, ExternalLink, X, Clock } from 'lucide-react';
+import { Check, CheckCircle, Trash2, Key, Plus, UserPlus, Edit, Shield, LayoutGrid, ScrollText, Copy, Bell, BellRing, ExternalLink, X, Clock, LogOut } from 'lucide-react';
 import ImagePicker from '../components/common/ImagePicker';
+import { toast } from 'sonner';
 
 const StatusBadge = ({ payment, getStatus }) => {
     const status = getStatus(payment);
@@ -79,6 +80,10 @@ const Admin = () => {
 
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
     const [assignData, setAssignData] = useState({ userId: '', serviceId: '' });
+
+    // RESET PASSWORD STATE
+    const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+    const [resetData, setResetData] = useState({ userId: null, newPassword: '' });
 
     // --- USERS FILTER & SORT ---
     const [userSearch, setUserSearch] = useState('');
@@ -185,10 +190,17 @@ const Admin = () => {
     };
 
     const resetPassword = (id) => {
-        const newPassword = window.prompt("Digite a nova senha para o usuário:");
-        if (newPassword) {
-            updateUser(id, { password: newPassword });
-            alert("Senha alterada com sucesso!");
+        setResetData({ userId: id, newPassword: '' });
+        setIsResetModalOpen(true);
+    };
+
+    const handleResetSubmit = (e) => {
+        e.preventDefault();
+        if (resetData.userId && resetData.newPassword) {
+            updateUser(resetData.userId, { password: resetData.newPassword });
+            toast.success("Senha alterada com sucesso!");
+            setIsResetModalOpen(false);
+            setResetData({ userId: null, newPassword: '' });
         }
     };
 
@@ -1550,7 +1562,7 @@ const Admin = () => {
             {/* ASSIGN MODAL (Kept same logic) */}
             {
                 isAssignModalOpen && (
-                    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                         <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl animate-fade-in">
                             <h2 className="text-2xl font-bold mb-6 text-gray-900">Novo Lançamento</h2>
                             <form onSubmit={handleAssignService} className="space-y-4">
@@ -1580,6 +1592,56 @@ const Admin = () => {
                     </div>
                 )
             }
+
+            {/* PASSWORD RESET MODAL */}
+            {isResetModalOpen && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[80] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl animate-fade-in">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-bold text-gray-900">Redefinir Senha</h2>
+                            <button onClick={() => setIsResetModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleResetSubmit} className="space-y-4">
+                            <div className="bg-amber-50 p-3 rounded-xl flex gap-3 text-amber-700 text-xs font-medium mb-2">
+                                <Key size={16} className="shrink-0" />
+                                <p>Você está alterando a senha do usuário. Certifique-se de comunicar a nova senha a ele.</p>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Nova Senha</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={resetData.newPassword}
+                                    onChange={e => setResetData({ ...resetData, newPassword: e.target.value })}
+                                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none font-bold text-gray-800 focus:ring-2 focus:ring-indigo-100"
+                                    placeholder="Digite a nova senha..."
+                                    autoFocus
+                                />
+                            </div>
+
+                            <div className="flex gap-3 mt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsResetModalOpen(false)}
+                                    className="flex-1 py-3 text-gray-500 font-bold hover:bg-gray-50 rounded-xl transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-colors"
+                                >
+                                    Salvar Senha
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div >
     );
 };
