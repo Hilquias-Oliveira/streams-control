@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { db, auth } from '../config/firebase';
+import { db, auth, storage } from '../config/firebase';
+import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc, doc, query, orderBy, limit, writeBatch, where } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { INITIAL_PAYMENTS, SERVICES as INITIAL_SERVICES, USERS } from '../data/mockData';
@@ -629,6 +630,49 @@ export const DataProvider = ({ children }) => {
         }
     };
 
+    // --- STORAGE HELPERS ---
+    const uploadImage = async (base64String, path) => {
+        if (!base64String || !base64String.startsWith('data:')) return base64String;
+
+        try {
+            const storageRef = ref(storage, path);
+            await uploadString(storageRef, base64String, 'data_url');
+            const url = await getDownloadURL(storageRef);
+            return url;
+        } catch (error) {
+            console.error("Upload failed", error);
+            throw error;
+        }
+    };
+
+    const migrateImages = async () => {
+        let count = 0;
+        console.log("Starting Migration...");
+
+        // 1. Migrate Services
+        for (const s of services) {
+            if (s.logo && s.logo.startsWith('data:')) {
+                console.log(`Migrating Service: ${s.name}`);
+                const url = await uploadImage(s.logo, `services/${s.id}_logo_${Date.now()}`);
+                await updateDoc(doc(db, 'services', s.id), { logo: url });
+                count++;
+            }
+        }
+
+        // 2. Migrate Users
+        for (const u of users) {
+            if (u.avatar && u.avatar.startsWith('data:')) {
+                console.log(`Migrating User: ${u.name}`);
+                const url = await uploadImage(u.avatar, `avatars/${u.id}_avatar_${Date.now()}`);
+                await updateDoc(doc(db, 'users', u.id), { avatar: url });
+                count++;
+            }
+        }
+
+        console.log(`Migration Complete. Migrated ${count} images.`);
+        return count;
+    };
+
     return (
         <DataContext.Provider value={{
             payments,
@@ -647,7 +691,10 @@ export const DataProvider = ({ children }) => {
             migrateData, cleanupFuturePayments,
 
             getUser, getService, formatCurrency, getPaymentStatus, addLog,
-            globalFilter, setGlobalFilter, availableYears
+            globalFilter, setGlobalFilter, availableYears,
+
+            // Storage
+            uploadImage, migrateImages
         }}>
             {children}
         </DataContext.Provider>

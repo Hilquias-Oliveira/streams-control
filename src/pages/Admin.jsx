@@ -24,7 +24,8 @@ const Admin = () => {
         services, addService, updateService, assignService,
         logs, formatCurrency, getPaymentStatus,
         processedRequests, markRequestAsProcessed, addLog, togglePaymentStatus, cleanupFuturePayments,
-        globalFilter, setGlobalFilter, availableYears
+        globalFilter, setGlobalFilter, availableYears,
+        uploadImage, migrateImages
     } = useData();
 
     // Identify current user with live data
@@ -174,11 +175,26 @@ const Admin = () => {
     // Handlers
     const handleUserSubmit = async (e) => {
         e.preventDefault();
+
+        // Upload Avatar if needed
+        let avatarUrl = userData.avatar;
+        if (userData.avatar && userData.avatar.startsWith('data:')) {
+            try {
+                avatarUrl = await uploadImage(userData.avatar, `avatars/${userData.id || Date.now()}`);
+            } catch (err) {
+                console.error("Avatar upload failed", err);
+                toast.error("Erro ao enviar imagem. Tente novamente.");
+                return;
+            }
+        }
+
+        const finalData = { ...userData, avatar: avatarUrl };
+
         let success = false;
         if (userData.id) {
-            success = await updateUser(userData.id, userData);
+            success = await updateUser(userData.id, finalData);
         } else {
-            success = await addUser(userData);
+            success = await addUser(finalData);
         }
 
         if (success) {
@@ -228,7 +244,7 @@ const Admin = () => {
     const [pendingServiceUpdate, setPendingServiceUpdate] = useState(null);
     const [effectiveDate, setEffectiveDate] = useState(new Date().toISOString().split('T')[0].substring(0, 7)); // YYYY-MM
 
-    const handleServiceSubmit = (e) => {
+    const handleServiceSubmit = async (e) => {
         e.preventDefault();
 
         // Data Cleanup
@@ -236,6 +252,18 @@ const Admin = () => {
         if (finalForm.accessType === 'individual') {
             finalForm.login = '';
             finalForm.password = '';
+        }
+
+        // Upload Logo if needed
+        if (finalForm.logo && finalForm.logo.startsWith('data:')) {
+            try {
+                const url = await uploadImage(finalForm.logo, `services/${editingService ? editingService.id : 'new'}_logo_${Date.now()}`);
+                finalForm.logo = url;
+            } catch (err) {
+                console.error("Logo upload failed", err);
+                toast.error("Erro ao enviar logo. Tente novamente.");
+                return;
+            }
         }
 
         if (editingService) {
@@ -1064,7 +1092,46 @@ const Admin = () => {
             {
                 activeTab === 'settings' && (
                     <div className="space-y-6">
+                        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+                            <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                <Shield size={20} className="text-indigo-600" /> Manutenção de Dados
+                            </h3>
+                            <div className="bg-indigo-50 p-4 rounded-xl mb-4">
+                                <h4 className="font-bold text-indigo-900 text-sm mb-1">Migração de Imagens</h4>
+                                <p className="text-xs text-indigo-700 mb-4">
+                                    Detecta imagens salvas incorretamente dentro do banco de dados (Base64) e as move para o Firebase Storage,
+                                    liberando espaço e melhorando a performance.
+                                </p>
+                                <button
+                                    onClick={async () => {
+                                        if (window.confirm("Isso pode levar alguns minutos. O sistema irá processar todas as imagens.\n\nDeseja continuar?")) {
+                                            const btn = document.getElementById('btn-migrate');
+                                            if (btn) {
+                                                btn.disabled = true;
+                                                btn.innerText = "Processando... (Não feche)";
+                                            }
 
+                                            try {
+                                                const count = await migrateImages();
+                                                alert(`SUCESSO!\n\n${count} imagens foram migradas para o Storage.`);
+                                            } catch (error) {
+                                                console.error(error);
+                                                alert(`ERRO NA MIGRAÇÃO:\n${error.message}\n\nVerifique o console para mais detalhes.`);
+                                            } finally {
+                                                if (btn) {
+                                                    btn.disabled = false;
+                                                    btn.innerText = "Iniciar Migração";
+                                                }
+                                            }
+                                        }
+                                    }}
+                                    id="btn-migrate"
+                                    className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold text-xs hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    Iniciar Migração
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 )
             }

@@ -25,3 +25,5 @@ enableIndexedDbPersistence(db).catch((err) => {
     }
 });
 export const auth = getAuth(app);
+import { getStorage } from "firebase/storage";
+export const storage = getStorage(app);
