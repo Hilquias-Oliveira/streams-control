@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { db, auth } from '../config/firebase';
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc, doc, query, orderBy, limit, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, setDoc, doc, query, orderBy, limit, writeBatch, where } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { INITIAL_PAYMENTS, SERVICES as INITIAL_SERVICES, USERS } from '../data/mockData';
 import { toast } from 'sonner';
@@ -15,6 +15,13 @@ export const DataProvider = ({ children }) => {
     const [services, setServices] = useState([]);
     const [logs, setLogs] = useState([]);
     const [processedRequests, setProcessedRequests] = useState([]);
+    const [availableYears, setAvailableYears] = useState([new Date().getFullYear().toString()]);
+
+    // FILTERS (Global State)
+    const [globalFilter, setGlobalFilter] = useState({
+        year: new Date().getFullYear().toString(),
+        month: (new Date().getMonth() + 1).toString().padStart(2, '0')
+    });
 
     // --- FIRESTORE LISTENERS ---
 
@@ -38,8 +45,59 @@ export const DataProvider = ({ children }) => {
                     setUsers(data);
                 }, (error) => console.error("Users Listener Error:", error));
 
-                // Payments
-                unsubPayments = onSnapshot(collection(db, 'payments'), (snapshot) => {
+                // Years (Metadata - One time fetch)
+                const fetchYears = async () => {
+                    try {
+                        const q = query(collection(db, 'payments'), orderBy('date', 'asc'), limit(1));
+                        const snap = await import('firebase/firestore').then(mod => mod.getDocs(q));
+                        if (!snap.empty) {
+                            const oldestDate = snap.docs[0].data().date; // YYYY-MM-DD
+                            const minYear = parseInt(oldestDate.split('-')[0]);
+                            const currentYear = new Date().getFullYear();
+                            const maxYear = currentYear + 1; // Rule: Max 12 months ahead
+
+                            const years = [];
+                            for (let y = minYear; y <= maxYear; y++) {
+                                years.push(String(y));
+                            }
+                            setAvailableYears(years);
+                        } else {
+                            // No payments, just show current and next
+                            const currentYear = new Date().getFullYear();
+                            setAvailableYears([String(currentYear), String(currentYear + 1)]);
+                        }
+                    } catch (e) {
+                        console.error("Error fetching years:", e);
+                    }
+                };
+                fetchYears();
+
+                // Payments (Dynamic Query)
+                const buildPaymentQuery = () => {
+                    const { year, month } = globalFilter;
+                    const constraints = [orderBy('date', 'desc')]; // Always order by date
+
+                    if (year && year !== 'all') {
+                        let start = `${year}-01-01`;
+                        let end = `${year}-12-31`;
+
+                        if (month && month !== 'all') {
+                            const lastDay = new Date(year, month, 0).getDate();
+                            start = `${year}-${month}-01`;
+                            end = `${year}-${month}-${lastDay}`;
+                        }
+
+                        constraints.push(where('date', '>=', start));
+                        constraints.push(where('date', '<=', end));
+                    }
+
+                    // Note: Firestore requires an index for range filter + orderBy on different fields if we kept date/amount sorts etc.
+                    // Since date is the range AND the sort, it works out of the box usually.
+
+                    return query(collection(db, 'payments'), ...constraints);
+                };
+
+                unsubPayments = onSnapshot(buildPaymentQuery(), (snapshot) => {
                     const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
                     setPayments(data);
                 }, (error) => console.error("Payments Listener Error:", error));
@@ -72,7 +130,7 @@ export const DataProvider = ({ children }) => {
             if (unsubLogs) unsubLogs();
             if (unsubRequests) unsubRequests();
         };
-    }, []);
+    }, [globalFilter]); // Re-run when filters change
 
 
     // --- LOGGING ---
@@ -174,9 +232,11 @@ export const DataProvider = ({ children }) => {
             };
             await addDoc(collection(db, 'users'), newUser);
             toast.success("Usuário adicionado!");
+            return true;
         } catch (error) {
             console.error("Error adding user:", error);
             toast.error("Erro ao criar usuário.");
+            return false;
         }
     };
 
@@ -185,9 +245,11 @@ export const DataProvider = ({ children }) => {
             const userRef = doc(db, 'users', id);
             await updateDoc(userRef, updates);
             toast.success("Usuário atualizado!");
+            return true;
         } catch (error) {
             console.error("Error updating user:", error);
             toast.error("Erro ao atualizar usuário.");
+            return false;
         }
     };
 
@@ -584,7 +646,8 @@ export const DataProvider = ({ children }) => {
             markRequestAsProcessed, resetPassword,
             migrateData, cleanupFuturePayments,
 
-            getUser, getService, formatCurrency, getPaymentStatus, addLog
+            getUser, getService, formatCurrency, getPaymentStatus, addLog,
+            globalFilter, setGlobalFilter, availableYears
         }}>
             {children}
         </DataContext.Provider>

@@ -23,7 +23,8 @@ const Admin = () => {
         users, addUser, updateUser, deleteUser, getUser,
         services, addService, updateService, assignService,
         logs, formatCurrency, getPaymentStatus,
-        processedRequests, markRequestAsProcessed, addLog, togglePaymentStatus, cleanupFuturePayments
+        processedRequests, markRequestAsProcessed, addLog, togglePaymentStatus, cleanupFuturePayments,
+        globalFilter, setGlobalFilter, availableYears
     } = useData();
 
     // Identify current user with live data
@@ -34,8 +35,7 @@ const Admin = () => {
     const [activeTab, setActiveTab] = useState('payments');
 
     // Filters State
-    const [selectedYear, setSelectedYear] = useState('2025');
-    const [selectedMonth, setSelectedMonth] = useState('01');
+    // REMOVED local year/month state to use Global Context
     const [selectedService, setSelectedService] = useState('all');
     const [selectedUser, setSelectedUser] = useState('all');
     // Sorting
@@ -50,14 +50,7 @@ const Admin = () => {
     }, [services, isSupervisor, currentUser]);
 
     // Constants
-    const YEARS = useMemo(() => {
-        if (!payments || payments.length === 0) return [new Date().getFullYear().toString()];
-        const uniqueYears = [...new Set(payments.map(p => p.date.split('-')[0]))].sort();
-        // Ensure current year is always available even if no payments
-        const currentYear = new Date().getFullYear().toString();
-        if (!uniqueYears.includes(currentYear)) uniqueYears.push(currentYear);
-        return uniqueYears.sort();
-    }, [payments]);
+    const YEARS = availableYears;
     const MONTHS = [
         { value: '01', label: 'Janeiro' }, { value: '02', label: 'Fevereiro' }, { value: '03', label: 'Março' },
         { value: '04', label: 'Abril' }, { value: '05', label: 'Maio' }, { value: '06', label: 'Junho' },
@@ -125,9 +118,16 @@ const Admin = () => {
             }
 
             if (!p.date) return false;
-            const [y, m] = p.date.split('-');
-            if (selectedYear !== 'all' && y !== selectedYear) return false;
-            if (selectedMonth !== 'all' && m !== selectedMonth) return false;
+            if (!p.date) return false;
+            // Date filtering is now done on server side via DataContext, but we keep this check 
+            // in case the array hasn't updated yet or if we want double-check.
+            // Actually, if we use 'all' in context, we might get more data than we want if we don't filter here too?
+            // But context filter is authoritative.
+            // Let's rely on Context for Date filtering.
+
+            // if (selectedYear !== 'all' && y !== selectedYear) return false;
+            // if (selectedMonth !== 'all' && m !== selectedMonth) return false;
+
             if (selectedService !== 'all' && p.serviceId !== selectedService) return false;
             if (selectedUser !== 'all' && String(p.userId) !== String(selectedUser)) return false;
             return true;
@@ -161,7 +161,7 @@ const Admin = () => {
             if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
             return 0;
         });
-    }, [payments, services, users, selectedYear, selectedMonth, selectedService, selectedUser, isSupervisor, currentUser, sortConfig]);
+    }, [payments, services, users, selectedService, selectedUser, isSupervisor, currentUser, sortConfig]);
 
     const handleSort = (key) => {
         setSortConfig(current => ({
@@ -172,15 +172,19 @@ const Admin = () => {
 
 
     // Handlers
-    const handleUserSubmit = (e) => {
+    const handleUserSubmit = async (e) => {
         e.preventDefault();
+        let success = false;
         if (userData.id) {
-            updateUser(userData.id, userData);
+            success = await updateUser(userData.id, userData);
         } else {
-            addUser(userData);
+            success = await addUser(userData);
         }
-        setUserData({ id: null, name: '', username: '', role: 'user', supervisedServices: [], avatar: '' });
-        setIsUserModalOpen(false);
+
+        if (success) {
+            setUserData({ id: null, name: '', username: '', role: 'user', supervisedServices: [], avatar: '' });
+            setIsUserModalOpen(false);
+        }
     };
 
     const removeUser = (id) => {
@@ -194,13 +198,15 @@ const Admin = () => {
         setIsResetModalOpen(true);
     };
 
-    const handleResetSubmit = (e) => {
+    const handleResetSubmit = async (e) => {
         e.preventDefault();
         if (resetData.userId && resetData.newPassword) {
-            updateUser(resetData.userId, { password: resetData.newPassword });
-            toast.success("Senha alterada com sucesso!");
-            setIsResetModalOpen(false);
-            setResetData({ userId: null, newPassword: '' });
+            const success = await updateUser(resetData.userId, { password: resetData.newPassword });
+            if (success) {
+                toast.success("Senha alterada com sucesso!");
+                setIsResetModalOpen(false);
+                setResetData({ userId: null, newPassword: '' });
+            }
         }
     };
 
@@ -680,14 +686,14 @@ const Admin = () => {
                             </div>
                             <div className="flex flex-col">
                                 <label className="text-xs font-bold text-gray-400 mb-1 ml-1">Ano</label>
-                                <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="bg-gray-50 border border-gray-200 text-gray-700 py-2 px-4 rounded-xl font-bold text-sm outline-none">
+                                <select value={globalFilter.year} onChange={(e) => setGlobalFilter(prev => ({ ...prev, year: e.target.value }))} className="bg-gray-50 border border-gray-200 text-gray-700 py-2 px-4 rounded-xl font-bold text-sm outline-none">
                                     <option value="all">Todos</option>
                                     {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
                                 </select>
                             </div>
                             <div className="flex flex-col">
                                 <label className="text-xs font-bold text-gray-400 mb-1 ml-1">Mês</label>
-                                <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="bg-gray-50 border border-gray-200 text-gray-700 py-2 px-4 rounded-xl font-bold text-sm outline-none">
+                                <select value={globalFilter.month} onChange={(e) => setGlobalFilter(prev => ({ ...prev, month: e.target.value }))} className="bg-gray-50 border border-gray-200 text-gray-700 py-2 px-4 rounded-xl font-bold text-sm outline-none">
                                     <option value="all">Todos</option>
                                     {MONTHS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
                                 </select>

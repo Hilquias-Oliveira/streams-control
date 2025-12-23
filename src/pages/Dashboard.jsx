@@ -42,11 +42,12 @@ const Dashboard = () => {
         loading: dataLoading,
         togglePaymentStatus: toggleStatusContext,
         getPaymentStatus,
-        updateUser
+        updateUser,
+        globalFilter, setGlobalFilter, availableYears
     } = useData();
 
     // -- STATE --
-    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+    // Local date state removed in favor of globalFilter
 
     // --- TEMPORARY FIX: Clarissa Auto-Updater ---
     useEffect(() => {
@@ -69,7 +70,7 @@ const Dashboard = () => {
             }
         }
     }, [currentUser, updateUser]);
-    const [selectedMonth, setSelectedMonth] = useState((new Date().getMonth() + 1).toString().padStart(2, '0'));
+
     const [selectedService, setSelectedService] = useState('all');
     const [selectedStatus, setSelectedStatus] = useState('all');
     const [selectedUser, setSelectedUser] = useState('all');
@@ -129,10 +130,9 @@ const Dashboard = () => {
         if (!currentUser) return [];
         return basePayments.filter(p => {
             if (!p.date) return false;
-            const [y, m] = p.date.split('-');
+            if (!p.date) return false;
+            // Date filtering is handled by DataContext (Server Side)
 
-            if (selectedYear !== 'all' && y !== selectedYear) return false;
-            if (selectedMonth !== 'all' && m !== selectedMonth) return false;
             if (selectedService !== 'all' && p.serviceId !== selectedService) return false;
             if (selectedStatus !== 'all' && p.status !== selectedStatus) return false;
             if (canFilterUsers && selectedUser !== 'all' && String(p.userId) !== String(selectedUser)) return false;
@@ -142,7 +142,7 @@ const Dashboard = () => {
 
             return true;
         });
-    }, [basePayments, selectedYear, selectedMonth, selectedService, selectedUser, canFilterUsers, currentUser]);
+    }, [basePayments, selectedService, selectedUser, selectedStatus, canFilterUsers, currentUser]);
 
     // 3. Sorting
     const sortedPayments = useMemo(() => {
@@ -220,7 +220,7 @@ const Dashboard = () => {
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `extrato_streams_${selectedMonth}_${selectedYear}.csv`);
+        link.setAttribute("download", `extrato_streams_${globalFilter.month}_${globalFilter.year}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -307,7 +307,7 @@ const Dashboard = () => {
         const groupArray = Object.values(groups).map(g => ({
             ...g,
             merchantName: g.serviceNames.size > 1 ? 'Múltiplos Serviços' : (g.merchantName || Array.from(g.serviceNames)[0]),
-            txId: `LOTE_${selectedMonth}_${new Date().getFullYear()}` // Batch ID
+            txId: `LOTE_${globalFilter.month}_${new Date().getFullYear()}` // Batch ID
         }));
 
         setPayAllGroups(groupArray);
@@ -400,20 +400,15 @@ const Dashboard = () => {
                             <label className="block text-xs font-bold text-gray-400 mb-1 ml-1">Ano</label>
                             <div className="relative">
                                 <select
-                                    value={selectedYear}
-                                    onChange={(e) => setSelectedYear(e.target.value)}
+                                    value={globalFilter.year}
+                                    onChange={(e) => setGlobalFilter(prev => ({ ...prev, year: e.target.value }))}
                                     className="w-full appearance-none bg-white border border-gray-200 text-gray-700 py-2 pl-3 pr-8 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-100 transition-all cursor-pointer hover:border-gray-300"
                                 >
                                     <option value="all">Todos</option>
                                     {/* Dynamic Years from Payments */}
-                                    {(() => {
-                                        const derivedYears = [...new Set(payments.map(p => p.date ? p.date.split('-')[0] : ''))].filter(Boolean).sort();
-                                        const currentY = new Date().getFullYear().toString();
-                                        if (!derivedYears.includes(currentY)) derivedYears.push(currentY);
-                                        return derivedYears.sort().map(y => (
-                                            <option key={y} value={y}>{y}</option>
-                                        ));
-                                    })()}
+                                    {availableYears.map(y => (
+                                        <option key={y} value={y}>{y}</option>
+                                    ))}
                                 </select>
                                 <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                             </div>
@@ -421,8 +416,8 @@ const Dashboard = () => {
                         <div>
                             <label className="block text-xs font-medium text-gray-700 mb-1">Mês</label>
                             <select
-                                value={selectedMonth}
-                                onChange={(e) => setSelectedMonth(e.target.value)}
+                                value={globalFilter.month}
+                                onChange={(e) => setGlobalFilter(prev => ({ ...prev, month: e.target.value }))}
                                 className="block w-full rounded-lg border-gray-300 text-sm focus:ring-indigo-500 focus:border-indigo-500"
                             >
                                 <option value="all">Todos</option>
